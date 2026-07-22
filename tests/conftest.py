@@ -44,11 +44,20 @@ def mock_data_provider(monkeypatch):
     """
     This fixture is automatically used in every test function.
 
-    We patch `server.get_clubs` / `server.get_competitions`, because that's
-    where those functions are used, not where they're defined.
+    We patch `server.get_clubs` / `server.get_competitions` (and the save_*
+    equivalents), because that's where those functions are used, not where
+    they're defined.
     """
+    saved = {"clubs": None, "competitions": None}
+
     monkeypatch.setattr("server.get_clubs", mock_clubs)
     monkeypatch.setattr("server.get_competitions", mock_competitions)
+    monkeypatch.setattr("server.save_clubs", lambda clubs: saved.__setitem__("clubs", clubs))
+    monkeypatch.setattr(
+        "server.save_competitions", lambda comps: saved.__setitem__("competitions", comps)
+    )
+
+    return saved
 
 
 @pytest.fixture

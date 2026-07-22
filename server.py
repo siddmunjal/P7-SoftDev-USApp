@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 
-from provider import get_clubs, get_competitions
+from provider import get_clubs, get_competitions, save_clubs, save_competitions
 
 MAX_SPOTS_PER_CLUB = 12
 
@@ -116,8 +116,12 @@ def book_spots():
         # Can't book more spots than are available in the competition
         abort(403)
 
-    competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required
+    competition["spotsAvailable"] = str(int(competition["spotsAvailable"]) - spots_required)
     current_club["points"] = str(int(current_club["points"]) - spots_required)
+
+    # Persist both updates so they're reflected on future requests (issue #5)
+    save_competitions(competitions)
+    save_clubs(clubs)
 
     session["club"] = current_club
 

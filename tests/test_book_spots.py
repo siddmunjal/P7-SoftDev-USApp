@@ -9,12 +9,24 @@ def test_successful_booking_shows_confirmation(logged_in_client):
     assert "booking complete" in resp.data.decode().lower()
 
 
-def test_successful_booking_deducts_points(logged_in_client):
-    """Points for the club go down by the number of spots booked."""
+def test_successful_booking_deducts_points_and_spots(logged_in_client, mock_data_provider):
+    """issue #5: points for the club and spots for the competition must both
+    be updated (and persisted) after a successful booking."""
     resp = _book(logged_in_client, "Spring Festival", "3")
     body = resp.data.decode()
-    # Club started with 13 points, spent 3 -> 10 left
+
+    # Club started with 13 points, spent 3 -> 10 left, shown on the page
     assert "10" in body
+
+    saved_clubs = mock_data_provider["clubs"]
+    saved_competitions = mock_data_provider["competitions"]
+    assert saved_clubs is not None, "save_clubs() should have been called"
+    assert saved_competitions is not None, "save_competitions() should have been called"
+
+    updated_club = next(c for c in saved_clubs if c["email"] == "john@simplylift.co")
+    updated_comp = next(c for c in saved_competitions if c["name"] == "Spring Festival")
+    assert updated_club["points"] == "10"
+    assert updated_comp["spotsAvailable"] == "22"
 
 
 def test_cannot_book_more_spots_than_points_available(logged_in_client):
