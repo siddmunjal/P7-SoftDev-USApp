@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 
 from provider import get_clubs, get_competitions
@@ -17,6 +19,11 @@ def _find_club_by_email(clubs, email):
 def _find_competition_by_name(competitions, name):
     matches = [comp for comp in competitions if comp["name"] == name]
     return matches[0] if matches else None
+
+
+def _competition_is_in_the_past(competition):
+    comp_date = datetime.strptime(competition["date"], "%Y-%m-%d %H:%M:%S")
+    return comp_date < datetime.now()
 
 
 @app.route("/")
@@ -91,6 +98,10 @@ def book_spots():
     if current_club is None:
         abort(401)
 
+    if _competition_is_in_the_past(competition):
+        # Can't book spots in a competition that has already happened (issue #4)
+        abort(403)
+
     spots_required = int(request.form["spots"])
 
     if spots_required > MAX_SPOTS_PER_CLUB:
@@ -99,6 +110,10 @@ def book_spots():
 
     if spots_required > int(current_club["points"]):
         # Clubs may not spend more points than they have (issue #2)
+        abort(403)
+
+    if spots_required > int(competition["spotsAvailable"]):
+        # Can't book more spots than are available in the competition
         abort(403)
 
     competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required

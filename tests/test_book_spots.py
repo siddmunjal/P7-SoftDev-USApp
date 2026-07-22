@@ -33,6 +33,21 @@ def test_cannot_book_more_than_12_spots(logged_in_client):
     assert resp.status_code == 403
 
 
+def test_cannot_book_spots_in_a_past_competition(logged_in_client):
+    """issue #4: a club cannot book spots for a competition that has
+    already happened."""
+    resp = _book(logged_in_client, "Fall Classic", "1")
+    assert resp.status_code == 403
+
+
+def test_cannot_book_more_spots_than_available_in_competition(logged_in_client):
+    """A club cannot book more spots than remain in the competition, even
+    when it has enough points and stays under the 12-spot cap."""
+    # Summer Sprint is in the future and only has 2 spots left.
+    resp = _book(logged_in_client, "Summer Sprint", "3")
+    assert resp.status_code == 403
+
+
 def test_cannot_book_for_unknown_competition(logged_in_client):
     resp = _book(logged_in_client, "Not A Real Competition", "1")
     assert resp.status_code == 404

@@ -1,6 +1,11 @@
+from datetime import datetime, timedelta
+
 import pytest
 
 from server import app as flask_app
+
+PAST_DATE = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+FUTURE_DATE = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def mock_clubs():
@@ -14,17 +19,22 @@ def mock_clubs():
 
 
 def mock_competitions():
-    """Static data to mock competitions"""
+    """Static data to mock competitions: one in the future, one in the past."""
     return [
         {
             "name": "Spring Festival",
-            "date": "2020-03-27 10:00:00",
+            "date": FUTURE_DATE,
             "spotsAvailable": "25",
         },
         {
             "name": "Fall Classic",
-            "date": "2020-10-22 13:30:00",
+            "date": PAST_DATE,
             "spotsAvailable": "13",
+        },
+        {
+            "name": "Summer Sprint",
+            "date": FUTURE_DATE,
+            "spotsAvailable": "2",
         },
     ]
 
