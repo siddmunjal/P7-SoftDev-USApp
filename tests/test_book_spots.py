@@ -26,6 +26,13 @@ def test_cannot_book_more_spots_than_points_available(logged_in_client):
     assert resp.status_code == 403
 
 
+def test_cannot_book_more_than_12_spots(logged_in_client):
+    """issue #3: a club cannot book more than 12 spots in a single
+    competition, even if it has enough points."""
+    resp = _book(logged_in_client, "Spring Festival", "13")
+    assert resp.status_code == 403
+
+
 def test_cannot_book_for_unknown_competition(logged_in_client):
     resp = _book(logged_in_client, "Not A Real Competition", "1")
     assert resp.status_code == 404

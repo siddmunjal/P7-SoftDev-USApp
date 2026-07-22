@@ -2,6 +2,8 @@ from flask import Flask, abort, flash, redirect, render_template, request, sessi
 
 from provider import get_clubs, get_competitions
 
+MAX_SPOTS_PER_CLUB = 12
+
 app = Flask(__name__)
 # You should change the secret key in production!
 app.secret_key = "something_special"
@@ -90,6 +92,10 @@ def book_spots():
         abort(401)
 
     spots_required = int(request.form["spots"])
+
+    if spots_required > MAX_SPOTS_PER_CLUB:
+        # Clubs may not book more than 12 spots per competition (issue #3)
+        abort(403)
 
     if spots_required > int(current_club["points"]):
         # Clubs may not spend more points than they have (issue #2)
