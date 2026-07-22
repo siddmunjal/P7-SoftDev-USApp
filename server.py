@@ -76,16 +76,32 @@ def book_spots():
     if club is None:
         return redirect(url_for("index"))
 
+    clubs = get_clubs()
     competitions = get_competitions()
 
     competition = _find_competition_by_name(competitions, request.form.get("competition", ""))
     if competition is None:
         abort(404)
 
+    # Always work off the freshly-loaded club record, since points may have
+    # changed since the user logged in.
+    current_club = _find_club_by_email(clubs, club["email"])
+    if current_club is None:
+        abort(401)
+
     spots_required = int(request.form["spots"])
+
+    if spots_required > int(current_club["points"]):
+        # Clubs may not spend more points than they have (issue #2)
+        abort(403)
+
     competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required
+    current_club["points"] = str(int(current_club["points"]) - spots_required)
+
+    session["club"] = current_club
+
     flash("Great-booking complete!")
-    return render_template("welcome.html", club=club, competitions=competitions)
+    return render_template("welcome.html", club=current_club, competitions=competitions)
 
 
 @app.route("/logout")
@@ -99,6 +115,12 @@ def logout():
 def unauthorized(error):
     message = "That email address isn't recognised."
     return render_template("error.html", code=401, message=message), 401
+
+
+@app.errorhandler(403)
+def forbidden(error):
+    message = "That booking isn't allowed."
+    return render_template("error.html", code=403, message=message), 403
 
 
 @app.errorhandler(404)
