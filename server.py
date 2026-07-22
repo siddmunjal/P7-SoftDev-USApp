@@ -1,10 +1,20 @@
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 
 from provider import get_clubs, get_competitions
 
 app = Flask(__name__)
 # You should change the secret key in production!
 app.secret_key = "something_special"
+
+
+def _find_club_by_email(clubs, email):
+    matches = [club for club in clubs if club["email"] == email]
+    return matches[0] if matches else None
+
+
+def _find_competition_by_name(competitions, name):
+    matches = [comp for comp in competitions if comp["name"] == name]
+    return matches[0] if matches else None
 
 
 @app.route("/")
@@ -18,9 +28,13 @@ def login():
     """Use the session object to store the club information across requests"""
 
     clubs = get_clubs()
-    email = request.form["email"]
+    email = request.form.get("email", "")
 
-    club = [item for item in clubs if item["email"] == email][0]
+    club = _find_club_by_email(clubs, email)
+    if club is None:
+        # Unknown email: reject the login instead of crashing (issue #1)
+        abort(401)
+
     session["club"] = club
 
     return redirect(url_for("summary"))
@@ -30,7 +44,10 @@ def login():
 def summary():
     """Custom "homepage" for logged in users"""
 
-    club = session["club"]
+    club = session.get("club")
+    if club is None:
+        return redirect(url_for("index"))
+
     competitions = get_competitions()
 
     return render_template("welcome.html", club=club, competitions=competitions)
@@ -39,31 +56,31 @@ def summary():
 @app.route("/book/<competition>")
 def book(competition):
     """Book spots in a competition page"""
-    club = session["club"]
+    club = session.get("club")
+    if club is None:
+        return redirect(url_for("index"))
 
     competitions = get_competitions()
-    matching_comps = [comp for comp in competitions if comp["name"] == competition]
+    found_competition = _find_competition_by_name(competitions, competition)
 
-    found_competition = matching_comps[0]
+    if found_competition is None:
+        abort(404)
 
-    if found_competition:
-        return render_template("booking.html", club=club, competition=found_competition)
-    else:
-        flash("Something went wrong-please try again")
-        return redirect(url_for("summary"))
+    return render_template("booking.html", club=club, competition=found_competition)
 
 
 @app.route("/book", methods=["POST"])
 def book_spots():
     """This page is only accessible through a POST request (form validation)"""
-    club = session["club"]
+    club = session.get("club")
+    if club is None:
+        return redirect(url_for("index"))
+
     competitions = get_competitions()
 
-    matching_comps = [
-        comp for comp in competitions if comp["name"] == request.form["competition"]
-    ]
-
-    competition = matching_comps[0]
+    competition = _find_competition_by_name(competitions, request.form.get("competition", ""))
+    if competition is None:
+        abort(404)
 
     spots_required = int(request.form["spots"])
     competition["spotsAvailable"] = int(competition["spotsAvailable"]) - spots_required
@@ -74,8 +91,20 @@ def book_spots():
 @app.route("/logout")
 def logout():
     """We delete session data in order to log the user out"""
-    del session["club"]
+    session.pop("club", None)
     return redirect(url_for("index"))
+
+
+@app.errorhandler(401)
+def unauthorized(error):
+    message = "That email address isn't recognised."
+    return render_template("error.html", code=401, message=message), 401
+
+
+@app.errorhandler(404)
+def not_found(error):
+    message = "We couldn't find that competition."
+    return render_template("error.html", code=404, message=message), 404
 
 
 if __name__ == "__main__":

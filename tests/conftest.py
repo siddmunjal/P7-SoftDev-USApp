@@ -1,8 +1,11 @@
 import pytest
 
+from server import app as flask_app
+
 
 def mock_clubs():
-    """Static data to mock clubs"""
+    """Static data to mock clubs. Returns a fresh list/dicts every call, mirroring
+    the fact that provider.get_clubs() re-reads the JSON file each time."""
     return [
         {"name": "Simply Lift", "email": "john@simplylift.co", "points": "13"},
         {"name": "Iron Temple", "email": "admin@irontemple.com", "points": "4"},
@@ -29,10 +32,28 @@ def mock_competitions():
 @pytest.fixture(autouse=True)
 def mock_data_provider(monkeypatch):
     """
-    This fixture will be automatically used in test functions.
+    This fixture is automatically used in every test function.
 
-    We patch `server.get_clubs`, because that's where the get_clubs function is used.
+    We patch `server.get_clubs` / `server.get_competitions`, because that's
+    where those functions are used, not where they're defined.
     """
-
     monkeypatch.setattr("server.get_clubs", mock_clubs)
     monkeypatch.setattr("server.get_competitions", mock_competitions)
+
+
+@pytest.fixture
+def app():
+    flask_app.config.update({"TESTING": True})
+    return flask_app
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+
+@pytest.fixture
+def logged_in_client(client):
+    """A test client that is already logged in as Simply Lift (13 points)."""
+    client.post("/login", data={"email": "john@simplylift.co"}, follow_redirects=True)
+    return client
