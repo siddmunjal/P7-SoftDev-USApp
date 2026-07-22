@@ -102,7 +102,13 @@ def book_spots():
         # Can't book spots in a competition that has already happened (issue #4)
         abort(403)
 
-    spots_required = int(request.form["spots"])
+    try:
+        spots_required = int(request.form["spots"])
+    except (KeyError, ValueError):
+        abort(400)
+
+    if spots_required <= 0:
+        abort(400)
 
     if spots_required > MAX_SPOTS_PER_CLUB:
         # Clubs may not book more than 12 spots per competition (issue #3)
@@ -147,6 +153,12 @@ def logout():
 def unauthorized(error):
     message = "That email address isn't recognised."
     return render_template("error.html", code=401, message=message), 401
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    message = "That booking request wasn't valid."
+    return render_template("error.html", code=400, message=message), 400
 
 
 @app.errorhandler(403)

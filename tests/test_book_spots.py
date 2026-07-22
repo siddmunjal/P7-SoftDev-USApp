@@ -68,3 +68,18 @@ def test_cannot_book_for_unknown_competition(logged_in_client):
 def test_booking_requires_login(client):
     resp = client.post("/book", data={"competition": "Spring Festival", "spots": "1"})
     assert resp.status_code == 302
+
+
+def test_booking_with_non_numeric_spots_returns_400(logged_in_client):
+    resp = _book(logged_in_client, "Spring Festival", "not-a-number")
+    assert resp.status_code == 400
+
+
+def test_booking_with_zero_spots_returns_400(logged_in_client):
+    resp = _book(logged_in_client, "Spring Festival", "0")
+    assert resp.status_code == 400
+
+
+def test_booking_with_negative_spots_returns_400(logged_in_client):
+    resp = _book(logged_in_client, "Spring Festival", "-2")
+    assert resp.status_code == 400
