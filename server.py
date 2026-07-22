@@ -129,6 +129,13 @@ def book_spots():
     return render_template("welcome.html", club=current_club, competitions=competitions)
 
 
+@app.route("/clubs")
+def clubs_board():
+    """Public points board - shows every club and its point balance (issue #6)"""
+    clubs = get_clubs()
+    return render_template("clubs.html", clubs=clubs)
+
+
 @app.route("/logout")
 def logout():
     """We delete session data in order to log the user out"""
